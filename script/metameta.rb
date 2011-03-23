@@ -1,5 +1,5 @@
 # cleaning full working copy
-# => git reset --hard HEAD && git clean -f -d
+# => git reset --hard HEAD && git clean -f -d -x
 # Meta-meta programing the world!!
 class Parsers
   def process(key,value)
@@ -24,10 +24,10 @@ parsers = Parsers.new
 metatable = [{
   #rails generate scaffold Unit 
   'Unit' => [
+    {:name => 'string'},
     {:position => 'string'},
     {:exp => 'integer'},
     {:level => 'integer'},
-    {:name => 'string'},
     {:name_unit => 'string'},
     {:faction_name => 'string'},
     {:cost => 'integer'},
@@ -38,7 +38,9 @@ metatable = [{
     {:skill => 'integer'},
     {:intelligence => 'integer'},
     {:primary => '*bt(Weapon)'},
-    {:secondary => '*bt(Weapon)'}
+    {:secondary => '*bt(Weapon)'},
+    {:squadron => '*bt(Squadron)'}
+    
   ]},{
   
   'Weapon' => [
