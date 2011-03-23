@@ -105,7 +105,7 @@ metatable.each do |key, value|
   `#{cmd}`
 end
 
-`rake db:migrate`
+`rake db:migrate:reset`
 
 metatable.each do |key, value|
   cmd = "rails g web_app_theme:themed #{key}s --engine=haml --force"
