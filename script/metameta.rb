@@ -96,21 +96,16 @@ metatable = [{
   }
 }]
 
-metametainfo = ["METAMETAINFO = ["]
-metametainfo2 = []
+metametanames = []
 
 metatable.each do |item|
   name = item.keys.first
   cmd = "rails g scaffold #{name} "
-  metametainfo << "['#{name}',#{name.downcase}s_path],"
-  metametainfo2 << "#{name}"
+  metametanames << "#{name}"
   item[item.keys.first].each { |k,v| cmd += parsers.process(k,v).to_s+" " }
   puts cmd
   `#{cmd}`
 end
-
-metametainfo << "]"
-File.open("config/metametainfo.rb", 'w') {|f| f.write(metametainfo.join("\n")) }
 
 puts `rake db:migrate`
 
@@ -120,9 +115,16 @@ metatable.each do |item|
   puts `#{cmd}`
 end
 
-metametainfo2.each do |name|
+metametainfo = ["METAMETAINFO = ["]
+
+metametanames.each do |name|
+  metametainfo << "['#{name}',#{name.downcase}s_path],"
   lines = File.open("app/controllers/#{name.downcase}s_controller.rb").readlines
   lines.insert(1,"  before_filter :authenticate_user!\n")
   File.open("app/controllers/#{name.downcase}s_controller.rb", 'w') {|f| f.write(lines.join) }
 end
+
+metametainfo << "]"
+
+File.open("config/metametainfo.rb", 'w') {|f| f.write(metametainfo.join("\n")) }
 
