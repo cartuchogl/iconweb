@@ -21,8 +21,7 @@ end
 
 parsers = Parsers.new
 
-metatable = 
-{
+metatable = [{
   #rails generate scaffold Unit 
   'Unit' => {
     :position => 'string',
@@ -40,7 +39,7 @@ metatable =
     :intelligence => 'integer',
     :primary => '*bt(Weapon)',
     :secondary => '*bt(Weapon)'
-  },
+  }},{
   
   'Weapon' => {
     :name => 'string',
@@ -60,31 +59,31 @@ metatable =
     :vlong => 'integer',
     :vlong_bonus => 'integer',
     :vlong_damage => 'string'
-  },
+  }},{
   
   'Squadron' => {
     :name => 'string',
     :player => '*bt(User)'
-  },
+  }},{
   
   'Game' => {
     :squadron1 => '*bt(Squadron)',
     :squadron2 => '*bt(Squadron)',
     :turns => '*hm(Turn)'
-  },
+  }},{
   
   'Turn' => {
     :game => '*bt(Game)',
     :moves => '*hm(Move)',
     :fires => '*hm(Fire)'
-  },
+  }},{
   
   'Move' => {
     :unit => '*bt(Unit)',
     :x => 'float',
     :y => 'float',
     :turn => '*bt(Turn)'
-  },
+  }},{
   
   'Fire' => {
     :orig => '*bt(Unit)',
@@ -95,20 +94,26 @@ metatable =
     :turn => '*bt(Turn)',
     :damage => 'integer'
   }
-  
-}
+}]
 
-metatable.each do |key, value|
-  cmd = "rails g scaffold #{key} "
-  value.each { |k,v| cmd += parsers.process(k,v).to_s+" " }
+metametainfo = ["METAMETAINFO = ["]
+
+metatable.each do |item|
+  name = item.keys.first
+  cmd = "rails g scaffold #{name} "
+  metametainfo << "['#{name}',#{name.downcase}s_path],"
+  item[item.keys.first].each { |k,v| cmd += parsers.process(k,v).to_s+" " }
   puts cmd
   `#{cmd}`
 end
 
-`rake db:migrate:reset`
+metametainfo << "]"
+File.open("config/metametainfo.rb", 'w') {|f| f.write(metametainfo.join("\n")) }
 
-metatable.each do |key, value|
-  cmd = "rails g web_app_theme:themed #{key}s --engine=haml --force"
+puts `rake db:migrate:reset`
+
+metatable.each do |item|
+  cmd = "rails g web_app_theme:themed #{item.keys.first}s --engine=haml --force"
   puts cmd
   puts `#{cmd}`
 end
