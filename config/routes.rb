@@ -2,6 +2,15 @@ RepCan::Application.routes.draw do
   devise_for :users
 
   get "home/index"
+  
+  get "true_game/moves/:game_id/:player_id", :to =>'true_game#get_moves'
+  post "true_game/moves/:game_id/:player_id", :to =>'true_game#post_moves'
+  
+  get "true_game/targets/:game_id/:player_id", :to =>'true_game#get_targets'
+  post "true_game/targets/:game_id/:player_id", :to =>'true_game#post_targets'
+  
+  get "true_game/clean/:game_id/:player_id", :to =>'true_game#get_clean'
+  post "true_game/clean/:game_id/:player_id", :to =>'true_game#post_clean'
 
   # The priority is based upon order of creation:
   # first created -> highest priority.
