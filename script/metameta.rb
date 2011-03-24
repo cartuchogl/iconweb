@@ -45,9 +45,61 @@ class Parsers
   def process_model(key,value)
     value[0,1] != '*' ? nil : parse_model(key,value)
   end
-end
+  
+  def do_the_heavy_work(metatable)
+    metametanames = []
 
-parsers = Parsers.new
+    puts "\n-=:[First generate basic scaffold]:=-"
+    metatable.each do |item|
+      name = item.keys.first
+      cmd = "rails g scaffold #{name} "
+      metametanames << "#{name}"
+      item[item.keys.first].each { |prop| cmd += process(prop.keys.first,prop[prop.keys.first]).to_s+" " }
+      puts cmd
+      puts `#{cmd}`
+    end
+
+    puts "\n-=:[Migrate the database]:=-"
+    puts `rake db:migrate`
+
+    puts "\n-=:[web-app-themized]:=-"
+    metatable.each do |item|
+      cmd = "rails g web_app_theme:themed #{item.keys.first}s --engine=haml --force"
+      puts cmd
+      puts `#{cmd}`
+    end
+
+    metametainfo = ["METAMETAINFO = ["]
+
+    puts "\n-=:[Make new controllers to restricted access]:=-"
+    metametanames.each do |name|
+      metametainfo << "['#{name}',#{name.downcase}s_path],"
+      lines = File.open("app/controllers/#{name.downcase}s_controller.rb").readlines
+      lines.insert(1,"  before_filter :authenticate_user!\n")
+      File.open("app/controllers/#{name.downcase}s_controller.rb", 'w') {|f| f.write(lines.join) }
+    end
+
+    metametainfo << "]"
+
+    puts "\n-=:[Write metainfo of paths for menu]:=-"
+    File.open("config/metametainfo.rb", 'w') {|f| f.write(metametainfo.join("\n")) }
+
+    puts "\n-=:[Add relations to models]:=-"
+    metatable.each do |item|
+      name = item.keys.first
+      relations = []
+      item[item.keys.first].each { |prop| 
+        relations << process_model(prop.keys.first,prop[prop.keys.first]) 
+      }
+      relations.compact!
+      unless relations.empty?
+        lines = File.open("app/models/#{name.downcase}.rb").readlines
+        lines.insert(1,relations.join("\n")+"\n")
+        File.open("app/models/#{name.downcase}.rb", 'w') {|f| f.write(lines.join) }
+      end
+    end
+  end
+end
 
 metatable = [{
   #rails generate scaffold Unit 
@@ -126,55 +178,5 @@ metatable = [{
   ]
 }]
 
-metametanames = []
-
-puts "\n-=:[First generate basic scaffold]:=-"
-metatable.each do |item|
-  name = item.keys.first
-  cmd = "rails g scaffold #{name} "
-  metametanames << "#{name}"
-  item[item.keys.first].each { |prop| cmd += parsers.process(prop.keys.first,prop[prop.keys.first]).to_s+" " }
-  puts cmd
-  puts `#{cmd}`
-end
-
-puts "\n-=:[Migrate de database]:=-"
-puts `rake db:migrate`
-
-puts "\n-=:[web-app-themized]:=-"
-metatable.each do |item|
-  cmd = "rails g web_app_theme:themed #{item.keys.first}s --engine=haml --force"
-  puts cmd
-  puts `#{cmd}`
-end
-
-metametainfo = ["METAMETAINFO = ["]
-
-puts "\n-=:[Make new controllers to restricted access]:=-"
-metametanames.each do |name|
-  metametainfo << "['#{name}',#{name.downcase}s_path],"
-  lines = File.open("app/controllers/#{name.downcase}s_controller.rb").readlines
-  lines.insert(1,"  before_filter :authenticate_user!\n")
-  File.open("app/controllers/#{name.downcase}s_controller.rb", 'w') {|f| f.write(lines.join) }
-end
-
-metametainfo << "]"
-
-puts "\n-=:[Write metainfo of paths for menu]:=-"
-File.open("config/metametainfo.rb", 'w') {|f| f.write(metametainfo.join("\n")) }
-
-puts "\n-=:[Add relations to models]:=-"
-metatable.each do |item|
-  name = item.keys.first
-  relations = []
-  item[item.keys.first].each { |prop| 
-    relations << parsers.process_model(prop.keys.first,prop[prop.keys.first]) 
-  }
-  relations.compact!
-  unless relations.empty?
-    lines = File.open("app/models/#{name.downcase}.rb").readlines
-    lines.insert(1,relations.join("\n")+"\n")
-    File.open("app/models/#{name.downcase}.rb", 'w') {|f| f.write(lines.join) }
-  end
-end
+Parsers.new.do_the_heavy_work(metatable)
 
