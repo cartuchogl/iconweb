@@ -17,6 +17,34 @@ class Parsers
   def hm(key,value)
     nil
   end
+  
+  # belongs_to :object, :class_name => "Object", :foreign_key => "object_id"
+  def bt_model(key,value)
+    mdl = value[4..-2]
+    if mdl.empty? then
+      "  belongs_to :#{key}"
+    else
+      "  belongs_to :#{key}, :class_name => '#{mdl}'"
+    end
+  end
+  
+  # has_many :objects, :class_name => "object", :foreign_key => "reference_id"
+  def hm_model(key,value)
+    mdl = value[4..-2]
+    if mdl.empty? then
+      "  has_many :#{key}"
+    else
+      "  has_many :#{key}, :class_name => '#{mdl}'"
+    end
+  end
+  
+  def parse_model(key,value)
+    send((value[1,2]+"_model").to_sym,key,value)
+  end
+  
+  def process_model(key,value)
+    value[0,1] != '*' ? nil : parse_model(key,value)
+  end
 end
 
 parsers = Parsers.new
@@ -39,7 +67,7 @@ metatable = [{
     {:intelligence => 'integer'},
     {:primary => '*bt(Weapon)'},
     {:secondary => '*bt(Weapon)'},
-    {:squadron => '*bt(Squadron)'}
+    {:squadron => '*bt()'}
     
   ]},{
   
@@ -71,20 +99,20 @@ metatable = [{
   'Game' => [
     {:squadron1 => '*bt(Squadron)'},
     {:squadron2 => '*bt(Squadron)'},
-    {:turns => '*hm(Turn)'}
+    {:turns => '*hm()'}
   ]},{
   
   'Turn' => [
-    {:game => '*bt(Game)'},
-    {:moves => '*hm(Move)'},
-    {:fires => '*hm(Fire)'}
+    {:game => '*bt()'},
+    {:moves => '*hm()'},
+    {:fires => '*hm()'}
   ]},{
   
   'Move' => [
-    {:unit => '*bt(Unit)'},
+    {:unit => '*bt()'},
     {:x => 'float'},
     {:y => 'float'},
-    {:turn => '*bt(Turn)'}
+    {:turn => '*bt()'}
   ]},{
   
   'Fire' => [
@@ -93,24 +121,27 @@ metatable = [{
     {:distance => 'integer'},
     {:dice => 'integer'},
     {:coverage => 'float'},
-    {:turn => '*bt(Turn)'},
+    {:turn => '*bt()'},
     {:damage => 'integer'}
   ]
 }]
 
 metametanames = []
 
+puts "\n-=:[First generate basic scaffold]:=-"
 metatable.each do |item|
   name = item.keys.first
   cmd = "rails g scaffold #{name} "
   metametanames << "#{name}"
   item[item.keys.first].each { |prop| cmd += parsers.process(prop.keys.first,prop[prop.keys.first]).to_s+" " }
   puts cmd
-  `#{cmd}`
+  puts `#{cmd}`
 end
 
+puts "\n-=:[Migrate de database]:=-"
 puts `rake db:migrate`
 
+puts "\n-=:[web-app-themized]:=-"
 metatable.each do |item|
   cmd = "rails g web_app_theme:themed #{item.keys.first}s --engine=haml --force"
   puts cmd
@@ -119,6 +150,7 @@ end
 
 metametainfo = ["METAMETAINFO = ["]
 
+puts "\n-=:[Make new controllers to restricted access]:=-"
 metametanames.each do |name|
   metametainfo << "['#{name}',#{name.downcase}s_path],"
   lines = File.open("app/controllers/#{name.downcase}s_controller.rb").readlines
@@ -128,5 +160,21 @@ end
 
 metametainfo << "]"
 
+puts "\n-=:[Write metainfo of paths for menu]:=-"
 File.open("config/metametainfo.rb", 'w') {|f| f.write(metametainfo.join("\n")) }
+
+puts "\n-=:[Add relations to models]:=-"
+metatable.each do |item|
+  name = item.keys.first
+  relations = []
+  item[item.keys.first].each { |prop| 
+    relations << parsers.process_model(prop.keys.first,prop[prop.keys.first]) 
+  }
+  relations.compact!
+  unless relations.empty?
+    lines = File.open("app/models/#{name.downcase}.rb").readlines
+    lines.insert(1,relations.join("\n")+"\n")
+    File.open("app/models/#{name.downcase}.rb", 'w') {|f| f.write(lines.join) }
+  end
+end
 
